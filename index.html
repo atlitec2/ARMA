@@ -1,0 +1,395 @@
+<!doctype html>
+<html lang="es">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Centro de Trabajo 3D — V0.4</title>
+<style>
+:root{--bg:#f4f6f8;--card:#fff;--text:#17202a;--muted:#667085;--line:#e4e7ec;--accent:#2563eb;--ok:#15803d;--warn:#b45309;--danger:#b91c1c}
+*{box-sizing:border-box} body{margin:0;font-family:Inter,Segoe UI,Arial,sans-serif;background:var(--bg);color:var(--text)}
+.app{display:flex;min-height:100vh}.side{width:245px;background:#111827;color:#fff;padding:20px 14px;position:sticky;top:0;height:100vh}
+.logo{font-weight:800;font-size:18px;padding:8px 10px 20px}.logo small{display:block;color:#9ca3af;font-weight:500;margin-top:4px}
+nav button{width:100%;background:transparent;color:#d1d5db;border:0;text-align:left;padding:11px 12px;border-radius:8px;margin:2px 0;cursor:pointer;font-size:14px}
+nav button:hover,nav button.active{background:#1f2937;color:#fff}.main{flex:1;padding:28px;max-width:1500px;margin:auto;width:100%}
+h1{margin:0 0 5px;font-size:28px} h2{margin:0 0 16px} h3{margin:0 0 10px}.sub{color:var(--muted);margin-bottom:24px}
+.page{display:none}.page.active{display:block}.grid{display:grid;gap:16px}.cards{grid-template-columns:repeat(4,minmax(0,1fr));margin-bottom:20px}.two{grid-template-columns:repeat(2,minmax(0,1fr))}
+.card{background:var(--card);border:1px solid var(--line);border-radius:12px;padding:18px;box-shadow:0 1px 2px #00000008}.stat .label{color:var(--muted);font-size:13px}.stat .num{font-size:26px;font-weight:800;margin-top:5px}.toolbar{display:flex;gap:10px;align-items:center;justify-content:space-between;margin-bottom:14px;flex-wrap:wrap}
+button.primary,.btn{border:0;border-radius:8px;padding:10px 14px;cursor:pointer;background:var(--accent);color:#fff;font-weight:700}.btn.secondary{background:#eef2ff;color:#1e40af}.btn.ghost{background:#f2f4f7;color:#344054}.btn.danger{background:#fee2e2;color:#991b1b}.btn.small{padding:7px 9px;font-size:12px}
+table{width:100%;border-collapse:collapse;font-size:14px}th,td{padding:11px 8px;border-bottom:1px solid var(--line);text-align:left;vertical-align:top}th{font-size:12px;text-transform:uppercase;color:var(--muted)}
+input,select,textarea{width:100%;padding:9px 10px;border:1px solid #d0d5dd;border-radius:8px;background:#fff;font:inherit}textarea{min-height:80px;resize:vertical}.form{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:12px}.full{grid-column:1/-1}.field label{display:block;font-size:12px;font-weight:700;color:#475467;margin-bottom:5px}.actions{display:flex;gap:8px;justify-content:flex-end;margin-top:14px}
+.badge{display:inline-block;padding:4px 8px;border-radius:999px;font-size:11px;font-weight:800;background:#eef2ff;color:#3730a3}.ok{background:#dcfce7;color:#166534}.warn{background:#fef3c7;color:#92400e}.dangerb{background:#fee2e2;color:#991b1b}
+.notice{border-left:4px solid var(--warn);background:#fffbeb;padding:12px 14px;border-radius:8px;margin-bottom:16px}.empty{color:var(--muted);padding:25px;text-align:center}
+.modal{display:none;position:fixed;inset:0;background:#0008;align-items:center;justify-content:center;padding:20px;z-index:5}.modal.open{display:flex}.modalbox{background:#fff;border-radius:14px;width:min(760px,100%);max-height:90vh;overflow:auto;padding:22px}
+.kpi{font-size:12px;color:var(--muted)}.pricebox{font-size:24px;font-weight:900}.chips{display:flex;gap:5px;flex-wrap:wrap}.chip{background:#f2f4f7;padding:4px 7px;border-radius:999px;font-size:11px}
+.timeline{display:grid;gap:9px}.event{padding:12px;border:1px solid var(--line);border-radius:9px}.event strong{display:block}.right{float:right}
+.client-mode .side { display: none !important; }
+.client-mode .toolbar button { display: none !important; }
+.client-mode .main { max-width: 1000px; padding: 20px; }
+@media(max-width:900px){.side{width:190px}.cards{grid-template-columns:repeat(2,1fr)}}@media(max-width:650px){.app{display:block}.side{position:relative;width:100%;height:auto}.form,.two,.cards{grid-template-columns:1fr}.main{padding:18px}table{display:block;overflow:auto}}
+</style>
+</head>
+<body>
+<div class="app">
+<aside class="side">
+<div class="logo">🖨️ Centro 3D<small>V0.4</small></div>
+<nav id="nav">
+<button data-page="dashboard">🏠 Centro de trabajo</button>
+<button data-page="cotizador">🧮 Cotizador</button>
+<button data-page="piezas">🧩 Piezas</button>
+<button data-page="catalogo">🛒 Catálogo</button>
+<button data-page="agenda">📅 Agenda</button>
+<button data-page="pedidos">📦 Pedidos</button>
+<button data-page="clientes">👤 Clientes</button>
+<button data-page="inventario">🧵 Inventario</button>
+<button data-page="impresoras">🖨️ Impresoras</button>
+<button data-page="fallos">❌ Fallos</button>
+<button data-page="estadisticas">📊 Estadísticas</button>
+<button data-page="config">⚙️ Configuración</button>
+</nav>
+</aside>
+<main class="main">
+
+<section id="dashboard" class="page">
+<h1>Centro de trabajo</h1><div class="sub">Vista general del taller.</div>
+<div id="alerts"></div>
+<div class="grid cards">
+<div class="card stat"><div class="label">Pedidos activos</div><div class="num" id="dOrders">0</div></div>
+<div class="card stat"><div class="label">Impresiones en curso</div><div class="num" id="dPrinting">0</div></div>
+<div class="card stat"><div class="label">Ventas registradas</div><div class="num" id="dSales">$0</div></div>
+<div class="card stat"><div class="label">Ganancia estimada</div><div class="num" id="dProfit">$0</div></div>
+</div>
+<div class="grid two">
+<div class="card"><h3>Próximas entregas</h3><div id="nextDeliveries"></div></div>
+<div class="card"><h3>Producción</h3><div id="production"></div></div>
+</div>
+</section>
+
+<section id="cotizador" class="page">
+<h1>Cotizador</h1><div class="sub">Introduce los datos variables para conocer los costos.</div>
+<div class="card">
+<div class="form">
+<div class="field full"><label>Pieza (Autocompletar datos)</label><select id="qPiece" onchange="autoFillQuote()"></select></div>
+<div class="field"><label>Filamento (Inventario)</label><select id="qFilament"></select></div>
+<div class="field"><label>Impresora</label><select id="qPrinter"></select></div>
+<div class="field"><label>Peso total (g)</label><input id="qWeight" type="number" min="0" step="0.1" placeholder="Ej. 86"></div>
+<div class="field"><label>Tiempo (horas)</label><input id="qHours" type="number" min="0" step="0.01" placeholder="Ej. 5.7"></div>
+<div class="field"><label>Tiempo de trabajo (horas)</label><input id="qLabor" type="number" min="0" step="0.01" placeholder="Ej. 0.25"></div>
+<div class="field"><label>Cantidad</label><input id="qQty" type="number" min="1" value="1"></div>
+<div class="field"><label>Urgencia</label><select id="qUrgency"><option value="normal">Normal</option><option value="rapida">Rápida (+10%)</option><option value="urgente">Urgente (+25%)</option></select></div>
+<div class="full"><label class="field"><span class="field"><label>Notas</label><textarea id="qNotes"></textarea></span></label></div>
+</div>
+<div class="actions"><button class="primary" onclick="calculateQuote()">Calcular</button></div>
+</div>
+<div id="quoteResult" style="margin-top:16px"></div>
+</section>
+
+<section id="piezas" class="page">
+<div class="toolbar"><div><h1>Piezas</h1><div class="sub">Biblioteca reutilizable de todo lo que fabricas.</div></div><button class="primary" onclick="openPiece()">+ Nueva pieza</button></div>
+<div class="card"><div id="piecesTable"></div></div>
+</section>
+
+<section id="catalogo" class="page">
+<h1>Catálogo de venta</h1><div class="sub">Piezas disponibles.</div>
+<div class="card"><div id="catalogGrid"></div></div>
+</section>
+
+<section id="agenda" class="page">
+<h1>Agenda</h1><div class="sub">Entregas y avisos por prioridad.</div>
+<div class="card"><div id="agendaList"></div></div>
+</section>
+
+<section id="pedidos" class="page">
+<div class="toolbar"><div><h1>Pedidos</h1><div class="sub">Producción y entregas.</div></div><button class="primary" onclick="openOrder()">+ Nuevo pedido</button></div>
+<div class="card"><div id="ordersTable"></div></div>
+</section>
+
+<section id="clientes" class="page">
+<div class="toolbar"><div><h1>Clientes</h1><div class="sub">Historial de clientes.</div></div><button class="primary" onclick="openClient()">+ Nuevo cliente</button></div>
+<div class="card"><div id="clientsTable"></div></div>
+</section>
+
+<section id="inventario" class="page">
+<div class="toolbar"><div><h1>Inventario</h1><div class="sub">Filamentos e insumos.</div></div><button class="primary" onclick="openInventory()">+ Nuevo artículo</button></div>
+<div class="card"><div id="inventoryTable"></div></div>
+</section>
+
+<section id="impresoras" class="page">
+<div class="toolbar"><div><h1>Impresoras</h1><div class="sub">Catálogo de máquinas y costos.</div></div><button class="primary" onclick="openPrinter()">+ Nueva impresora</button></div>
+<div class="card"><div id="printersTable"></div></div>
+</section>
+
+<section id="fallos" class="page">
+<div class="toolbar"><div><h1>Fallos de impresión</h1><div class="sub">Pérdidas registradas.</div></div><button class="primary" onclick="openFailure()">+ Registrar fallo</button></div>
+<div class="card"><div id="failuresTable"></div></div>
+</section>
+
+<section id="estadisticas" class="page">
+<h1>Estadísticas</h1><div class="sub">Resumen de producción.</div>
+<div class="grid cards">
+<div class="card stat"><div class="label">Piezas fabricadas</div><div class="num" id="sPieces">0</div></div>
+<div class="card stat"><div class="label">Unidades vendidas</div><div class="num" id="sUnits">0</div></div>
+<div class="card stat"><div class="label">Horas de impresión</div><div class="num" id="sHours">0</div></div>
+<div class="card stat"><div class="label">Costo de fallos</div><div class="num" id="sFailures">$0</div></div>
+</div>
+<div class="grid two">
+<div class="card"><h3>Mejores clientes</h3><div id="sTopClients"></div></div>
+<div class="card"><h3>Piezas más vendidas</h3><div id="sTopPieces"></div></div>
+<div class="card"><h3>Ventas por tipo</h3><div id="sTypes"></div></div>
+<div class="card"><h3>Impresoras más usadas</h3><div id="sPrinters"></div></div>
+</div>
+</section>
+
+<section id="config" class="page">
+<h1>Configuración</h1><div class="sub">Valores base.</div>
+<div class="card"><div class="form">
+<div class="field"><label>Precio electricidad ($/kWh)</label><input id="cKwh" type="number" step="0.01"></div>
+<div class="field"><label>Mano de obra ($/h)</label><input id="cLabor" type="number" step="0.01"></div>
+<div class="field"><label>Merma (%)</label><input id="cWaste" type="number" step="0.1"></div>
+<div class="field"><label>Empaque por pedido ($)</label><input id="cPack" type="number" step="0.01"></div>
+<div class="field"><label>Margen amigos (%)</label><input id="cFriend" type="number" step="0.1"></div>
+<div class="field"><label>Margen normal (%)</label><input id="cNormal" type="number" step="0.1"></div>
+<div class="field"><label>Margen personalizado (%)</label><input id="cCustom" type="number" step="0.1"></div>
+<div class="field"><label>Descuento mayoreo (%)</label><input id="cBulk" type="number" step="0.1"></div>
+<div class="field"><label>Aviso normal (días antes)</label><input id="cNdays" type="number" min="0"></div>
+<div class="field"><label>Aviso rápida (días antes)</label><input id="cRdays" type="number" min="0"></div>
+<div class="field"><label>Aviso urgente (días antes)</label><input id="cUdays" type="number" min="0"></div>
+</div><div class="actions"><button class="primary" onclick="saveConfig()">Guardar configuración</button></div></div>
+</section>
+
+</main></div>
+
+<div class="modal" id="modal"><div class="modalbox"><div id="modalContent"></div></div></div>
+
+<script>
+const KEY="centro3d_v01";
+let db=JSON.parse(localStorage.getItem(KEY)||"null")||{
+ config:{kwh:1.5,labor:80,waste:10,pack:5,friend:15,normal:40,custom:60,bulk:15,ndays:5,rdays:4,udays:3},
+ pieces:[],
+ printers:[{id:1,name:"Bambu A1",watts:120,wear:8}],
+ clients:[],orders:[],failures:[],
+ inventory:[
+  {id:1,name:"PLA Negro",type:"Filamento",price:350,stock:1000},
+  {id:2,name:"PLA Blanco",type:"Filamento",price:380,stock:1000}
+ ]
+};
+function save(){localStorage.setItem(KEY,JSON.stringify(db));renderAll()}
+const money=n=>"$"+Number(n||0).toFixed(2);
+const id=()=>Date.now()+Math.floor(Math.random()*1000);
+const esc=s=>String(s??"").replace(/[&<>"']/g,m=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[m]));
+function modal(html){document.getElementById("modalContent").innerHTML=html;document.getElementById("modal").classList.add("open")}
+function closeModal(){document.getElementById("modal").classList.remove("open")}
+document.getElementById("modal").addEventListener("click",e=>{if(e.target.id==="modal")closeModal()});
+document.querySelectorAll("#nav button").forEach(b=>b.onclick=()=>showPage(b.dataset.page));
+function showPage(p){document.querySelectorAll(".page").forEach(x=>x.classList.remove("active"));document.getElementById(p).classList.add("active");document.querySelectorAll("#nav button").forEach(x=>x.classList.toggle("active",x.dataset.page===p));renderAll()}
+function fillSelect(el,arr,labelFn,blank="Seleccionar..."){let e=document.getElementById(el);if(!e)return;e.innerHTML='<option value="">'+blank+'</option>'+arr.map(x=>`<option value="${x.id}">${esc(labelFn(x))}</option>`).join("")}
+
+function encodeImage(el){
+ if(el.files && el.files[0]){
+  let r=new FileReader();
+  r.onload=e=>document.getElementById('pPhotoVal').value=e.target.result;
+  r.readAsDataURL(el.files[0]);
+ }
+}
+
+function autoFillQuote(){
+ let p = db.pieces.find(x=>x.id==document.getElementById('qPiece').value);
+ if(p){
+  if(p.weight) document.getElementById('qWeight').value = p.weight;
+  if(p.hours) document.getElementById('qHours').value = p.hours;
+ }
+}
+
+function populateQuote(){
+ fillSelect("qPiece",db.pieces,p=>p.name,"(Opcional) Seleccionar pieza guardada...");
+ let inventoryFilaments = db.inventory.filter(x => x.type === 'Filamento');
+ fillSelect("qFilament",inventoryFilaments,p=>`${p.name} — ${money(p.price)}/kg`);
+ fillSelect("qPrinter",db.printers,p=>p.name);
+}
+
+function calculateQuote(){
+ const f=db.inventory.find(x=>x.id==qFilament.value),pr=db.printers.find(x=>x.id==qPrinter.value);
+ const w=+qWeight.value||0,h=+qHours.value||0,l=+qLabor.value||0,qty=+qQty.value||1;
+ if(!f||!pr||!w||!h){quoteResult.innerHTML='<div class="notice">Selecciona filamento e impresora e introduce peso y tiempo.</div>';return}
+ const c=db.config, material=w*(f.price/1000)*qty, waste=material*c.waste/100, elec=(pr.watts*h/1000)*c.kwh*qty, wear=pr.wear*h*qty, labor=l*c.labor, base=material+waste+elec+wear+labor+c.pack;
+ const urg={normal:0,rapida:.10,urgente:.25}[qUrgency.value];
+ quoteResult.innerHTML=`<div class="card"><div class="grid two"><div><h3>Costo estimado</h3>
+ <table><tr><td>Material</td><td>${money(material)}</td></tr><tr><td>Merma</td><td>${money(waste)}</td></tr><tr><td>Electricidad</td><td>${money(elec)}</td></tr><tr><td>Desgaste</td><td>${money(wear)}</td></tr><tr><td>Mano de obra</td><td>${money(labor)}</td></tr><tr><td>Empaque</td><td>${money(c.pack)}</td></tr><tr><th>Costo base</th><th>${money(base)}</th></tr></table></div>
+ <div><h3>Precios sugeridos (${qty} unidad${qty>1?"es":""})</h3>${priceRows(base,urg,qty)}</div></div></div>`;
+}
+
+function priceRows(base,urg,qty){
+ const c=db.config;let vals={amigos:base*(1+c.friend/100),normal:base*(1+c.normal/100),personalizado:base*(1+c.custom/100),mayoreo:base*(1-c.bulk/100)};
+ return Object.entries(vals).map(([k,v])=>`<div class="card" style="margin:7px 0;padding:11px"><span class="kpi">${k.toUpperCase()}</span><div class="pricebox">${money(v*(1+urg))}</div></div>`).join("")
+}
+
+/* PIEZAS */
+function openPiece(eid=null){
+ const p=eid?db.pieces.find(x=>x.id==eid):null;
+ modal(`<h2>${p?"Editar":"Nueva"} pieza</h2><div class="form">
+<div class="field"><label>Nombre</label><input id="pName" value="${p?esc(p.name):''}"></div><div class="field"><label>Descripción</label><input id="pDesc" value="${p?esc(p.desc):''}"></div>
+<div class="field"><label>Precio de venta unitario ($)</label><input id="pPrice" type="number" step="0.01" value="${p?p.price||0:''}"></div>
+<div class="field"><label>Horas base de impresión</label><input id="pHours" type="number" step="0.01" value="${p?p.hours||0:''}"></div>
+<div class="field"><label>Peso de impresión (g)</label><input id="pWeight" type="number" step="0.1" value="${p?p.weight||0:''}"></div>
+<div class="field"><label>Mostrar en catálogo</label><select id="pCatalog"><option value="no" ${p&&!p.catalog?'selected':''}>No</option><option value="si" ${p&&p.catalog?'selected':''}>Sí</option></select></div>
+<div class="field full"><label>Etiquetas (separadas por coma)</label><input id="pTags" placeholder="gaming, personalizado, PLA" value="${p?esc(p.tags.join(', ')):''}"></div>
+<div class="field full"><label>Foto</label><input type="file" accept="image/*" onchange="encodeImage(this)"><input type="hidden" id="pPhotoVal" value="${p?esc(p.photo):''}"></div>
+<div class="field full"><label>Archivos de fabricación (nombres separados por coma)</label><input id="pFiles" placeholder="modelo.stl, proyecto.3mf" value="${p?esc(p.files.join(', ')):''}"></div>
+</div><div class="actions"><button class="btn ghost" onclick="closeModal()">Cancelar</button><button class="primary" onclick="savePiece(${eid||'null'})">Guardar</button></div>`)
+}
+function savePiece(eid){
+ let tags=pTags.value.split(",").map(x=>x.trim()).filter(Boolean), files=pFiles.value.split(",").map(x=>x.trim()).filter(Boolean);
+ if(eid){ let p=db.pieces.find(x=>x.id==eid); if(p){p.name=pName.value; p.desc=pDesc.value; p.price=+pPrice.value||0; p.hours=+pHours.value||0; p.weight=+pWeight.value||0; p.tags=tags; p.photo=pPhotoVal.value; p.catalog=pCatalog.value==="si"; p.files=files;} }
+ else { db.pieces.push({id:id(),name:pName.value,desc:pDesc.value,price:+pPrice.value||0,hours:+pHours.value||0,weight:+pWeight.value||0,tags:tags,photo:pPhotoVal.value,catalog:pCatalog.value==="si",files:files,versions:[]}); }
+ save();closeModal()
+}
+function renderPieces(){
+ let e=document.getElementById("piecesTable");
+ e.innerHTML=db.pieces.length?`<table><tr><th>Pieza</th><th>Precio/Horas</th><th>Peso</th><th>Etiquetas</th><th>Catálogo</th><th>Acciones</th></tr>${db.pieces.map(p=>`<tr><td><b>${esc(p.name)}</b><br><span class="kpi">${esc(p.desc)}</span></td><td>${money(p.price)}<br><span class="kpi">${p.hours}h</span></td><td>${p.weight||0} g</td><td><div class="chips">${p.tags.map(t=>`<span class="chip">#${esc(t)}</span>`).join("")}</div></td><td>${p.catalog?'<span class="badge ok">Sí</span>':'No'}</td><td><button class="btn small ghost" onclick="openPiece(${p.id})">✏️ Editar</button> <button class="btn small ghost" onclick="toggleCatalog(${p.id})">${p.catalog?'Quitar catálogo':'Vender'}</button></td></tr>`).join("")}</table>`:'<div class="empty">Aún no hay piezas.</div>'
+}
+function toggleCatalog(pid){let p=db.pieces.find(x=>x.id==pid);p.catalog=!p.catalog;save()}
+function renderCatalog(){let e=document.getElementById("catalogGrid"),a=db.pieces.filter(p=>p.catalog);e.innerHTML=a.length?`<div class="grid cards">${a.map(p=>`<div class="card"><div style="height:120px;background:#f9fafb;border-radius:8px;margin-bottom:10px;background-image:url('${p.photo}');background-size:cover;background-position:center">${!p.photo?'<div style="font-size:40px;text-align:center;padding-top:30px">🧩</div>':''}</div><h3>${esc(p.name)}</h3><p class="kpi">${esc(p.desc)}</p><div class="pricebox" style="margin:8px 0;font-size:18px">${money(p.price)}</div><div class="chips">${p.tags.map(t=>`<span class="chip">#${esc(t)}</span>`).join("")}</div></div>`).join("")}</div>`:'<div class="empty">No hay piezas activadas para el catálogo.</div>'}
+
+/* CLIENTES */
+function openClient(eid=null){
+ const c=eid?db.clients.find(x=>x.id==eid):null;
+ modal(`<h2>${c?"Editar":"Nuevo"} cliente</h2><div class="form"><div class="field"><label>Nombre</label><input id="clName" value="${c?esc(c.name):''}"></div><div class="field"><label>Teléfono</label><input id="clPhone" value="${c?esc(c.phone):''}"></div><div class="field full"><label>Notas</label><textarea id="clNotes">${c?esc(c.notes):''}</textarea></div></div><div class="actions"><button class="btn ghost" onclick="closeModal()">Cancelar</button><button class="primary" onclick="saveClient(${eid||'null'})">Guardar</button></div>`)
+}
+function saveClient(eid){
+ if(eid){ let c=db.clients.find(x=>x.id==eid); if(c){c.name=clName.value; c.phone=clPhone.value; c.notes=clNotes.value;} }
+ else { db.clients.push({id:id(),name:clName.value,phone:clPhone.value,notes:clNotes.value}); }
+ save();closeModal()
+}
+function renderClients(){
+ let e=document.getElementById("clientsTable");
+ e.innerHTML=db.clients.length?`<table><tr><th>Cliente</th><th>Teléfono</th><th>Pedidos</th><th>Total comprado</th><th>Acciones</th></tr>${db.clients.map(c=>{let os=db.orders.filter(o=>o.clientId==c.id);return `<tr><td><b>${esc(c.name)}</b></td><td>${esc(c.phone)}</td><td>${os.length}</td><td>${money(os.reduce((s,o)=>s+o.price,0))}</td><td><button class="btn small ghost" onclick="openClient(${c.id})">✏️ Editar</button></td></tr>`}).join("")}</table>`:'<div class="empty">No hay clientes.</div>'
+}
+
+/* INVENTARIO */
+function openInventory(eid=null){
+ const i=eid?db.inventory.find(x=>x.id==eid):null;
+ modal(`<h2>${i?"Editar":"Nuevo"} artículo</h2><div class="form"><div class="field"><label>Nombre</label><input id="iName" value="${i?esc(i.name):''}"></div><div class="field"><label>Tipo</label><select id="iType"><option ${i&&i.type=='Filamento'?'selected':''}>Filamento</option><option ${i&&i.type=='Insumo'?'selected':''}>Insumo</option></select></div><div class="field"><label>Precio de compra ($ por kg/unidad)</label><input id="iPrice" type="number" step="0.01" value="${i?i.price:''}"></div><div class="field"><label>Cantidad actual</label><input id="iStock" type="number" step="0.1" value="${i?i.stock:''}"></div></div><div class="actions"><button class="btn ghost" onclick="closeModal()">Cancelar</button><button class="primary" onclick="saveInventory(${eid||'null'})">Guardar</button></div>`)
+}
+function saveInventory(eid){
+ if(eid){let i=db.inventory.find(x=>x.id==eid); if(i){i.name=iName.value;i.type=iType.value;i.price=+iPrice.value||0;i.stock=+iStock.value||0;}}
+ else{db.inventory.push({id:id(),name:iName.value,type:iType.value,price:+iPrice.value||0,stock:+iStock.value||0});}
+ save();closeModal()
+}
+function renderInventory(){let e=document.getElementById("inventoryTable");let all=[...db.inventory];e.innerHTML=all.length?`<table><tr><th>Artículo</th><th>Tipo</th><th>Precio</th><th>Stock</th><th>Acciones</th></tr>${all.map(x=>`<tr><td>${esc(x.name)}</td><td>${esc(x.type)}</td><td>${money(x.price)}</td><td>${x.stock}</td><td><button class="btn small ghost" onclick="openInventory(${x.id})">✏️ Editar</button></td></tr>`).join("")}</table>`:'<div class="empty">Inventario vacío.</div>'}
+
+/* IMPRESORAS */
+function openPrinter(eid=null){
+ const p=eid?db.printers.find(x=>x.id==eid):null;
+ modal(`<h2>${p?"Editar":"Nueva"} impresora</h2><div class="form"><div class="field"><label>Nombre/modelo</label><input id="prName" value="${p?esc(p.name):''}"></div><div class="field"><label>Consumo (W)</label><input id="prW" type="number" value="${p?p.watts:''}"></div><div class="field"><label>Desgaste/mantenimiento ($/h)</label><input id="prWear" type="number" step="0.01" value="${p?p.wear:''}"></div></div><div class="actions"><button class="btn ghost" onclick="closeModal()">Cancelar</button><button class="primary" onclick="savePrinter(${eid||'null'})">Guardar</button></div>`)
+}
+function savePrinter(eid){
+ if(eid){let p=db.printers.find(x=>x.id==eid); if(p){p.name=prName.value;p.watts=+prW.value||0;p.wear=+prWear.value||0;}}
+ else{db.printers.push({id:id(),name:prName.value,watts:+prW.value||0,wear:+prWear.value||0});}
+ save();closeModal()
+}
+function renderPrinters(){let e=document.getElementById("printersTable");e.innerHTML=`<table><tr><th>Impresora</th><th>Consumo</th><th>Desgaste</th><th>Acciones</th></tr>${db.printers.map(p=>{return `<tr><td>${esc(p.name)}</td><td>${p.watts} W</td><td>${money(p.wear)}/h</td><td><button class="btn small ghost" onclick="openPrinter(${p.id})">✏️ Editar</button></td></tr>`}).join("")}</table>`}
+
+/* FALLOS */
+function openFailure(eid=null){
+ const f=eid?db.failures.find(x=>x.id==eid):null;
+ modal(`<h2>${f?"Editar":"Registrar"} fallo</h2><div class="form"><div class="field"><label>Pieza</label><select id="fPiece"></select></div><div class="field"><label>Impresora</label><select id="fPrinter"></select></div><div class="field"><label>Material perdido (g)</label><input id="fWeight" type="number" value="${f?f.weight:''}"></div><div class="field"><label>Horas perdidas</label><input id="fHours" type="number" step="0.01" value="${f?f.hours:''}"></div><div class="field full"><label>Motivo</label><input id="fReason" value="${f?esc(f.reason):''}"></div></div><div class="actions"><button class="btn ghost" onclick="closeModal()">Cancelar</button><button class="primary" onclick="saveFailure(${eid||'null'})">Guardar</button></div>`);
+ fillSelect("fPiece",db.pieces,p=>p.name); fillSelect("fPrinter",db.printers,p=>p.name);
+ if(f){ document.getElementById("fPiece").value=f.pieceId; document.getElementById("fPrinter").value=f.printerId; }
+}
+function saveFailure(eid){
+ if(eid){let f=db.failures.find(x=>x.id==eid); if(f){f.pieceId=+fPiece.value;f.printerId=+fPrinter.value;f.weight=+fWeight.value||0;f.hours=+fHours.value||0;f.reason=fReason.value;}}
+ else{db.failures.push({id:id(),pieceId:+fPiece.value,printerId:+fPrinter.value,weight:+fWeight.value||0,hours:+fHours.value||0,reason:fReason.value,date:new Date().toISOString().slice(0,10)});}
+ save();closeModal()
+}
+function renderFailures(){let e=document.getElementById("failuresTable");e.innerHTML=db.failures.length?`<table><tr><th>Fecha</th><th>Pieza</th><th>Impresora</th><th>Material</th><th>Horas</th><th>Motivo</th><th>Acciones</th></tr>${db.failures.map(f=>`<tr><td>${f.date}</td><td>${esc(db.pieces.find(p=>p.id==f.pieceId)?.name||"—")}</td><td>${esc(db.printers.find(p=>p.id==f.printerId)?.name||"—")}</td><td>${f.weight} g</td><td>${f.hours}</td><td>${esc(f.reason)}</td><td><button class="btn small ghost" onclick="openFailure(${f.id})">✏️ Editar</button></td></tr>`).join("")}</table>`:'<div class="empty">No hay fallos registrados.</div>'}
+
+/* PEDIDOS */
+function calcOPrice(){
+ let p = db.pieces.find(x=>x.id==document.getElementById('oPiece').value);
+ if(p && p.price) {
+  let qty = +document.getElementById('oQty').value || 1;
+  document.getElementById('oPrice').value = (p.price * qty).toFixed(2);
+ } else {
+  document.getElementById('oPrice').value = '';
+ }
+}
+
+function openOrder(eid=null){
+ const o=eid?db.orders.find(x=>x.id==eid):null;
+ modal(`<h2>${o?"Editar":"Nuevo"} pedido</h2><div class="form">
+<div class="field"><label>Cliente</label><select id="oClient"></select></div>
+<div class="field"><label>Pieza</label><select id="oPiece" onchange="calcOPrice()"></select></div>
+<div class="field"><label>Impresora</label><select id="oPrinter"></select></div>
+<div class="field"><label>Cantidad</label><input id="oQty" type="number" value="${o?o.qty:1}" min="1" oninput="calcOPrice()"></div>
+<div class="field"><label>Precio total ($)</label><input id="oPrice" type="number" step="0.01" value="${o?o.price:''}"></div>
+<div class="field"><label>Prioridad</label><select id="oPriority"><option value="normal">Normal</option><option value="rapida">Rápida</option><option value="urgente">Urgente</option></select></div>
+<div class="field"><label>Tipo de precio</label><select id="oType"><option>Amigos</option><option>Normal</option><option>Personalizado</option><option>Mayoreo</option></select></div>
+<div class="field"><label>Fecha de entrega</label><input id="oDelivery" type="date" value="${o?o.delivery:new Date(Date.now()+7*86400000).toISOString().slice(0,10)}"></div>
+<div class="field"><label>Estado de producción</label><select id="oStatus"><option>Pendiente</option><option>En cola</option><option>Imprimiendo</option><option>Postproceso</option><option>Listo</option><option>Entregado</option></select></div>
+<div class="field"><label>Pago</label><select id="oPay"><option>Pendiente</option><option>Anticipo</option><option>Parcial</option><option>Pagado</option><option>Reembolsado</option></select></div>
+<div class="field"><label>Monto pagado ($)</label><input id="oPaid" type="number" step="0.01" value="${o?o.paid:0}"></div>
+</div><div class="actions"><button class="btn ghost" onclick="closeModal()">Cancelar</button><button class="primary" onclick="saveOrder(${eid||'null'})">Guardar pedido</button></div>`);
+fillSelect("oClient",db.clients,c=>c.name,"Seleccionar cliente..."); if(o) document.getElementById('oClient').value=o.clientId;
+fillSelect("oPiece",db.pieces,p=>p.name,"Seleccionar pieza..."); if(o) document.getElementById('oPiece').value=o.pieceId;
+fillSelect("oPrinter",db.printers,p=>p.name); if(o) document.getElementById('oPrinter').value=o.printerId;
+if(o){ document.getElementById('oPriority').value=o.priority; document.getElementById('oType').value=o.type; document.getElementById('oStatus').value=o.status; document.getElementById('oPay').value=o.pay; }
+else { document.getElementById('oType').value="Normal"; }
+}
+
+function saveOrder(eid){
+ let qty=+oQty.value||1, p = db.pieces.find(x=>x.id==+oPiece.value);
+ let unitHours = p?p.hours||0:0, finalPrice = +document.getElementById('oPrice').value||0;
+ if(eid){
+  let o=db.orders.find(x=>x.id==eid);
+  if(o){ o.clientId=+oClient.value; o.pieceId=+oPiece.value; o.printerId=+oPrinter.value; o.qty=qty; o.price=finalPrice; o.hours=unitHours*qty; o.priority=oPriority.value; o.type=oType.value; o.delivery=oDelivery.value; o.status=oStatus.value; o.pay=oPay.value; o.paid=+oPaid.value||0; }
+ } else {
+  db.orders.push({id:id(),clientId:+oClient.value,pieceId:+oPiece.value,printerId:+oPrinter.value,qty:qty,price:finalPrice,hours:unitHours*qty,priority:oPriority.value,type:oType.value,delivery:oDelivery.value,status:oStatus.value,pay:oPay.value,paid:+oPaid.value||0,created:new Date().toISOString().slice(0,10)});
+ }
+ save();closeModal()
+}
+
+function renderOrders(){
+ let e=document.getElementById("ordersTable");
+ e.innerHTML=db.orders.length?`<table><tr><th>Pedido</th><th>Cliente</th><th>Pieza</th><th>Entrega</th><th>Producción</th><th>Pago</th><th>Total</th><th>Acciones</th></tr>${db.orders.map(o=>`<tr><td>#${o.id.toString().slice(-5)}</td><td>${esc(db.clients.find(c=>c.id==o.clientId)?.name||"—")}</td><td>${esc(db.pieces.find(p=>p.id==o.pieceId)?.name||"—")} ×${o.qty}</td><td>${o.delivery}</td><td>${esc(o.status)}</td><td>${esc(o.pay)}<br>${money(o.paid)} / ${money(o.price)}</td><td>${money(o.price)}</td><td><button class="btn small ghost" onclick="openOrder(${o.id})">✏️ Editar</button></td></tr>`).join("")}</table>`:'<div class="empty">No hay pedidos.</div>'
+}
+
+function noticeDate(o){let days=db.config[{normal:"ndays",rapida:"rdays",urgente:"udays"}[o.priority]];let d=new Date(o.delivery+"T00:00:00");d.setDate(d.getDate()-days);return d}
+function renderAgenda(){let arr=[...db.orders].sort((a,b)=>a.delivery.localeCompare(b.delivery));let e=document.getElementById("agendaList");if(!arr.length){e.innerHTML='<div class="empty">No hay eventos.</div>';return}let today=new Date();today.setHours(0,0,0,0);e.innerHTML=`<div class="timeline">${arr.map(o=>{let ad=noticeDate(o),name=db.pieces.find(p=>p.id==o.pieceId)?.name||"—",cl=db.clients.find(c=>c.id==o.clientId)?.name||"—";let alert=ad<=today&&o.status!=="Entregado";return `<div class="event">${alert?'<span class="badge warn right">⚠️ Aviso</span>':''}<strong>${o.delivery} — ${esc(name)} ×${o.qty}</strong><span class="kpi">${esc(cl)} · Prioridad ${o.priority} · Pago: ${esc(o.pay)} (${money(o.paid)} de ${money(o.price)})</span><br><span class="kpi">Aviso programado: ${ad.toISOString().slice(0,10)}</span></div>`}).join("")}</div>`}
+function renderDashboard(){let active=db.orders.filter(o=>o.status!=="Entregado").length,printing=db.orders.filter(o=>o.status==="Imprimiendo").length,sales=db.orders.reduce((s,o)=>s+o.price,0);document.getElementById("dOrders").textContent=active;document.getElementById("dPrinting").textContent=printing;document.getElementById("dSales").textContent=money(sales);let costs=db.orders.reduce((s,o)=>s+o.price*.6,0);document.getElementById("dProfit").textContent=money(sales-costs);
+let today=new Date();today.setHours(0,0,0,0);let notices=db.orders.filter(o=>o.status!=="Entregado"&&noticeDate(o)<=today);document.getElementById("alerts").innerHTML=notices.length?`<div class="notice"><b>⚠️ Tienes ${notices.length} pedido(s) que ya entraron en su ventana de aviso.</b> Revisa la agenda.</div>`:"";
+let next=[...db.orders].filter(o=>o.status!=="Entregado").sort((a,b)=>a.delivery.localeCompare(b.delivery)).slice(0,5);document.getElementById("nextDeliveries").innerHTML=next.length?next.map(o=>`<div class="event"><b>${o.delivery}</b> — ${esc(db.pieces.find(p=>p.id==o.pieceId)?.name||"—")} ×${o.qty}<br><span class="kpi">${esc(db.clients.find(c=>c.id==o.clientId)?.name||"—")} · ${esc(o.status)}</span></div>`).join(""):'<div class="empty">Nada pendiente.</div>';
+document.getElementById("production").innerHTML=db.orders.filter(o=>["En cola","Imprimiendo","Postproceso"].includes(o.status)).map(o=>`<div class="event"><b>${esc(db.pieces.find(p=>p.id==o.pieceId)?.name||"—")}</b><br><span class="kpi">${esc(o.status)} · ${o.hours}h/u × ${o.qty}</span></div>`).join("")||'<div class="empty">No hay producción activa.</div>'}
+function renderStats(){
+ document.getElementById("sPieces").textContent=db.pieces.length;
+ document.getElementById("sUnits").textContent=db.orders.reduce((s,o)=>s+o.qty,0);
+ document.getElementById("sHours").textContent=db.orders.reduce((s,o)=>s+o.hours,0).toFixed(1);
+ let failCost=db.failures.reduce((s,f)=>{let p=db.printers.find(x=>x.id==f.printerId);return s+(f.hours*(p?.wear||0));},0);
+ document.getElementById("sFailures").textContent=money(failCost);
+
+ let types={Amigos:0,Normal:0,Personalizado:0,Mayoreo:0}; db.orders.forEach(o=>types[o.type]=(types[o.type]||0)+o.price);
+ document.getElementById("sTypes").innerHTML=Object.entries(types).map(([k,v])=>`<div class="event"><b>${k}</b><span class="right">${money(v)}</span></div>`).join("");
+
+ document.getElementById("sPrinters").innerHTML=db.printers.map(p=>`<div class="event"><b>${esc(p.name)}</b><span class="right">${db.orders.filter(o=>o.printerId==p.id).reduce((s,o)=>s+o.hours,0).toFixed(1)} h</span></div>`).join("");
+
+ let cStats={}; db.orders.forEach(o=>{cStats[o.clientId]=(cStats[o.clientId]||0)+o.price});
+ let topC=Object.entries(cStats).sort((a,b)=>b[1]-a[1]).slice(0,5);
+ document.getElementById("sTopClients").innerHTML=topC.length?topC.map(([cid,total])=>`<div class="event"><b>${esc(db.clients.find(c=>c.id==cid)?.name||"Desconocido")}</b><span class="right">${money(total)}</span></div>`).join(""):'<div class="empty">Sin datos suficientes</div>';
+
+ let pStats={}; db.orders.forEach(o=>{pStats[o.pieceId]=(pStats[o.pieceId]||0)+o.qty});
+ let topP=Object.entries(pStats).sort((a,b)=>b[1]-a[1]).slice(0,5);
+ document.getElementById("sTopPieces").innerHTML=topP.length?topP.map(([pid,qty])=>`<div class="event"><b>${esc(db.pieces.find(p=>p.id==pid)?.name||"Desconocido")}</b><span class="right">${qty} un.</span></div>`).join(""):'<div class="empty">Sin datos suficientes</div>';
+}
+
+function loadConfig(){let c=db.config;["kwh","labor","waste","pack","friend","normal","custom","bulk","ndays","rdays","udays"].forEach(x=>document.getElementById("c"+x[0].toUpperCase()+x.slice(1)).value=c[x])}
+function saveConfig(){db.config={kwh:+cKwh.value,labor:+cLabor.value,waste:+cWaste.value,pack:+cPack.value,friend:+cFriend.value,normal:+cNormal.value,custom:+cCustom.value,bulk:+cBulk.value,ndays:+cNdays.value,rdays:+cRdays.value,udays:+cUdays.value};save();alert("Configuración guardada.")}
+function renderAll(){populateQuote();renderPieces();renderCatalog();renderClients();renderInventory();renderPrinters();renderFailures();renderOrders();renderAgenda();renderDashboard();renderStats();loadConfig()}
+
+const isClientView = new URLSearchParams(window.location.search).get('view') === 'catalogo';
+if(isClientView){
+    document.body.classList.add('client-mode');
+    showPage("catalogo");
+} else {
+    showPage("dashboard");
+}
+</script>
+</body>
+</html>
