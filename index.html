@@ -3,7 +3,7 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1">
-<title>ARMA — Centro de Trabajo 3D V0.5</title>
+<title>ARMA — Centro de Trabajo 3D V0.6</title>
 
 <style>
 :root{
@@ -180,7 +180,7 @@ textarea{min-height:80px;resize:vertical}
 <aside class="side">
  <div class="logo">
   🖨️ ARMA
-  <small>Centro de Trabajo 3D · V0.5</small>
+  <small>Centro de Trabajo 3D · V0.6</small>
  </div>
 
  <nav id="nav">
@@ -916,6 +916,74 @@ function autoFillQuote(){
 
  document.getElementById("qWeight").value=p.weight||0;
  document.getElementById("qHours").value=p.hours||0;
+}
+
+function calculatePiecePrice(weight,hours,filament,printer,laborHours=0,type="Normal"){
+ const c=db.config;
+ if(!filament||!printer||weight<=0||hours<=0)return null;
+
+ const material=weight*(filament.price/1000);
+ const waste=material*c.waste/100;
+ const electricity=(printer.watts*hours/1000)*c.kwh;
+ const wear=printer.wear*hours;
+ const labor=laborHours*c.labor;
+ const packaging=c.pack;
+ const subtotal=material+waste+electricity+wear+labor+packaging;
+ const commissionCost=subtotal*c.commission/100;
+ const realCost=subtotal+commissionCost;
+
+ let margin=0;
+ if(type==="Amigos")margin=c.friend;
+ if(type==="Normal")margin=c.normal;
+ if(type==="Personalizado")margin=c.custom;
+ if(type==="Mayoreo")margin=-c.bulk;
+
+ const suggested=realCost*(1+margin/100);
+ return {realCost,suggested,profit:suggested-realCost};
+}
+
+function createPieceFromQuote(){
+ const name=prompt("¿Cómo se llamará la nueva pieza?");
+ if(!name||!name.trim())return;
+
+ const weight=Number(document.getElementById("qWeight").value)||0;
+ const hours=Number(document.getElementById("qHours").value)||0;
+ const laborHours=Number(document.getElementById("qLabor").value)||0;
+ const filament=db.inventory.find(x=>x.id==document.getElementById("qFilament").value);
+ const printer=db.printers.find(x=>x.id==document.getElementById("qPrinter").value);
+ const type=document.getElementById("qType").value;
+
+ const result=calculatePiecePrice(weight,hours,filament,printer,laborHours,type);
+ if(!result){
+  alert("Primero selecciona filamento e impresora e introduce peso y tiempo.");
+  return;
+ }
+
+ db.pieces.push({
+  id:uid(),
+  name:name.trim(),
+  price:result.suggested,
+  weight,
+  hours,
+  desc:"",
+  tags:[],
+  catalog:false,
+  photo:"",
+  files:[],
+  filamentId:filament.id,
+  printerId:printer.id,
+  laborHours,
+  priceType:type
+ });
+
+ save();
+ populateQuote();
+
+ const newPiece=db.pieces[db.pieces.length-1];
+ document.getElementById("qPiece").value=newPiece.id;
+ autoFillQuote();
+
+ alert(`Pieza "${name.trim()}" guardada con precio automático de ${money(result.suggested)}.`);
 }
 
 function calculateQuote(){
@@ -1817,9 +1885,7 @@ function deleteClient(id){
 
 function openPiece(eid=null){
 
- const p=eid?
-  db.pieces.find(x=>x.id==eid):
-  null;
+ const p=eid?db.pieces.find(x=>x.id==eid):null;
 
  modal(`
 
@@ -1827,27 +1893,50 @@ function openPiece(eid=null){
 
  <div class="form">
 
- <div class="field">
+ <div class="field full">
   <label>Nombre</label>
   <input id="pName" value="${esc(p?.name||"")}">
  </div>
 
  <div class="field">
-  <label>Precio de venta ($)</label>
-  <input id="pPrice" type="number" step="0.01"
-   value="${p?.price||0}">
+  <label>Filamento</label>
+  <select id="pFilament"></select>
+ </div>
+
+ <div class="field">
+  <label>Impresora</label>
+  <select id="pPrinter"></select>
  </div>
 
  <div class="field">
   <label>Peso (g)</label>
-  <input id="pWeight" type="number" step="0.1"
-   value="${p?.weight||0}">
+  <input id="pWeight" type="number" min="0" step="0.1" value="${p?.weight||0}">
  </div>
 
  <div class="field">
   <label>Tiempo impresión (h)</label>
-  <input id="pHours" type="number" step="0.01"
-   value="${p?.hours||0}">
+  <input id="pHours" type="number" min="0" step="0.01" value="${p?.hours||0}">
+ </div>
+
+ <div class="field">
+  <label>Mano de obra (h)</label>
+  <input id="pLabor" type="number" min="0" step="0.01" value="${p?.laborHours||0}">
+ </div>
+
+ <div class="field">
+  <label>Tipo de precio</label>
+  <select id="pPriceType">
+   <option value="Amigos" ${p?.priceType==="Amigos"?"selected":""}>Amigos</option>
+   <option value="Normal" ${!p?.priceType||p?.priceType==="Normal"?"selected":""}>Normal</option>
+   <option value="Personalizado" ${p?.priceType==="Personalizado"?"selected":""}>Personalizado</option>
+   <option value="Mayoreo" ${p?.priceType==="Mayoreo"?"selected":""}>Mayoreo</option>
+  </select>
+ </div>
+
+ <div class="field">
+  <label>Precio de venta ($)</label>
+  <input id="pPrice" type="number" step="0.01" value="${p?.price||0}" readonly>
+  <div class="kpi" id="pPriceHint">Se calcula automáticamente con la configuración actual.</div>
  </div>
 
  <div class="field full">
@@ -1857,9 +1946,7 @@ function openPiece(eid=null){
 
  <div class="field full">
   <label>Etiquetas</label>
-  <input id="pTags"
-   value="${esc((p?.tags||[]).join(", "))}"
-   placeholder="decoración, regalo, PLA">
+  <input id="pTags" value="${esc((p?.tags||[]).join(", "))}" placeholder="decoración, regalo, PLA">
  </div>
 
  <div class="field">
@@ -1872,26 +1959,82 @@ function openPiece(eid=null){
 
  <div class="field">
   <label>Foto</label>
-  <input id="pPhoto" type="text"
-   value="${esc(p?.photo||"")}"
-   placeholder="URL de imagen">
+  <input id="pPhoto" type="text" value="${esc(p?.photo||"")}" placeholder="URL de imagen">
  </div>
 
+ </div>
+
+ <div class="event" style="margin-top:14px">
+  <div class="kpi">Precio calculado</div>
+  <div class="pricebox" id="pAutoPrice">${money(p?.price||0)}</div>
  </div>
 
  <div class="actions">
-
- <button class="btn ghost" onclick="closeModal()">
-  Cancelar
- </button>
-
- <button class="primary"
-  onclick="savePiece(${eid||"null"})">
-  Guardar
- </button>
-
+  <button class="btn ghost" onclick="closeModal()">Cancelar</button>
+  <button class="primary" onclick="savePiece(${eid||"null"})">Guardar</button>
  </div>
  `);
+
+ fillSelect(
+  "pFilament",
+  db.inventory.filter(x=>x.type==="Filamento"),
+  f=>`${f.name} — ${money(f.price)}/kg`,
+  "Seleccionar filamento..."
+ );
+
+ fillSelect(
+  "pPrinter",
+  db.printers,
+  p=>p.name,
+  "Seleccionar impresora..."
+ );
+
+ if(p){
+  if(p.filamentId)pFilament.value=p.filamentId;
+  if(p.printerId)pPrinter.value=p.printerId;
+ }
+
+ ["pFilament","pPrinter","pWeight","pHours","pLabor","pPriceType"].forEach(id=>{
+  document.getElementById(id)?.addEventListener("input",recalculatePiecePrice);
+  document.getElementById(id)?.addEventListener("change",recalculatePiecePrice);
+ });
+
+ recalculatePiecePrice();
+}
+
+function recalculatePiecePrice(){
+
+ const weight=Number(document.getElementById("pWeight")?.value)||0;
+ const hours=Number(document.getElementById("pHours")?.value)||0;
+ const laborHours=Number(document.getElementById("pLabor")?.value)||0;
+
+ const filament=db.inventory.find(
+  x=>x.id==document.getElementById("pFilament")?.value
+ );
+
+ const printer=db.printers.find(
+  x=>x.id==document.getElementById("pPrinter")?.value
+ );
+
+ const type=document.getElementById("pPriceType")?.value||"Normal";
+
+ const result=calculatePiecePrice(
+  weight,hours,filament,printer,laborHours,type
+ );
+
+ const price=document.getElementById("pPrice");
+ const display=document.getElementById("pAutoPrice");
+ const hint=document.getElementById("pPriceHint");
+
+ if(!result){
+  if(display)display.textContent="$0.00";
+  if(hint)hint.textContent="Selecciona filamento e impresora e introduce peso y tiempo.";
+  return;
+ }
+
+ if(price)price.value=result.suggested.toFixed(2);
+ if(display)display.textContent=money(result.suggested);
+ if(hint)hint.textContent=`Costo real: ${money(result.realCost)} · Ganancia: ${money(result.profit)}`;
 }
 
 function savePiece(eid){
@@ -1904,7 +2047,11 @@ function savePiece(eid){
   desc:pDesc.value,
   tags:pTags.value.split(",").map(x=>x.trim()).filter(Boolean),
   catalog:pCatalog.value==="si",
-  photo:pPhoto.value
+  photo:pPhoto.value,
+  filamentId:Number(pFilament.value)||null,
+  printerId:Number(pPrinter.value)||null,
+  laborHours:Number(pLabor.value)||0,
+  priceType:pPriceType.value
  };
 
  if(!data.name.trim()){
@@ -1912,20 +2059,20 @@ function savePiece(eid){
   return;
  }
 
+ if(data.weight<=0||data.hours<=0||!data.filamentId||!data.printerId){
+  alert("Selecciona filamento e impresora e introduce peso y tiempo.");
+  return;
+ }
+
  if(eid){
-
   const p=db.pieces.find(x=>x.id==eid);
-
   if(p)Object.assign(p,data);
-
  }else{
-
   db.pieces.push({
    id:uid(),
    ...data,
    files:[]
   });
-
  }
 
  save();
